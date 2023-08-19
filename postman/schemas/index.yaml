@@ -1,0 +1,175 @@
+# this is a 3.0.3 document so parses know what's going on
+openapi: 3.0.3
+
+info:
+    # important to give it a good name so people understand what it is, and what your api does
+    title: Postmanaut Directory
+    # description is markdown-compatible
+    # this is pulled from https://www.postman.com/postman/workspace/postman-intergalactic/api/8f64b21f-15be-47a6-983d-29b94b7ed879/definition/2d8e61c1-02df-4529-afc2-4e413c2070ac/file/2d8e61c1-02df-4529-afc2-4e413c2070ac?version=055e73d4-10e9-412a-a6e0-bfdc31c7b4ea
+    description: |
+      ![OpenAPI Logo](https://avatars3.githubusercontent.com/u/16343502?v=3&s=100)
+
+      A demo _API_ to **discover** the **_[OpenAPI Specification](https://www.openapis.org/)_**.
+    version: "1.0"
+
+servers:
+    # add the base path, need to be sure all apis have distinct base path
+    - url: /postmanuat-directory/v1
+      description: Basepath
+
+paths:
+    # resource
+    /postmanauts:
+        # http method
+        get:
+            summary: Search for postmanauts
+            # this is located in the query, so you don't have to put it in the resource path
+            # something like /postmanauts?name=blah
+            parameters:
+              - name: name
+                in: query
+                required: false
+                description: partial or complete name
+                schema:
+                  type: string
+            responses:
+              500:
+                description: Unexpected problem
+                content:
+                  application/json:
+                    schema:
+                      # since we're using the same thing here at what's in 401, we can create a reusable component with that same info
+                      # so instead of copying and pasting, reference the reusable schema
+                      # dollar ref value expected is a json pointer which describes a path in a document
+                      $ref: "#/components/schemas/Errors"
+              # do 401 is something is called without key or token
+              # could return without content, but best to provide useful feedback so the user can solve the problem
+              401:
+                description: Missing API key
+                content:
+                  application/json:
+                    schema:
+                      # could use the ref here like in 500, but I will leave it for the sake of explaining the difference
+                      required:
+                        - errors
+                      properties:
+                        # Returning a list of errors/problems is a good practice
+                        # That helps consumer to solve many problems in one shot
+                        errors:
+                          type: array
+                          minItems: 1
+                          items:
+                            # An error feedback must help consumer solve the problem if possible
+                            required:
+                              - code
+                              - message
+                            properties:
+                              code:
+                                type: string
+                              message:
+                                type: string
+                              source:
+                                title: ErrorSource
+                                required:
+                                  - location
+                                  - name
+                                properties:
+                                  location:
+                                    type: string
+                                    enum:
+                                      - path
+                                      - query
+                                      - body
+                                      - header
+                                  name:
+                                    type: string
+                                    description: The name of the property or parameter causing the error
+                                  path:
+                                    type: string
+                                    description: JSON path targeting the source of error (only used when location is `body`)
+              # 404 not found should only be used if the PATH is not found, not if a user or postmanaut is not found
+              # what will be returned when everything is ok
+              200: 
+                description: Found postmanauts (empty list returned if no one is found)
+                content:
+                    application/json:
+                        # this content needs to be described, so use a schema
+                        # using json schema in openapi 3.0
+                        schema:
+                            title: Postmanauts
+                            # you can return an array, but it is not extensible so not recommended, using object here
+                            # if I want to add metadata like pagination or whatever, I can put it by data property, can't do that if type is array
+                            type: object
+                            required:
+                              - data
+                            properties:
+                              data:
+                                type: array
+                                minItems: 0
+                                items:
+                                  title: Postmanaut
+                                  required:
+                                    - id
+                                    - name
+                                    - registrationDate
+                                  properties:
+                                    id: 
+                                      type: string
+                                    name:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 256
+                                    registrationDate:
+                                      type: string
+                                      format: date
+                                    supportLevel:
+                                      type: string
+                                      enum:
+                                        - bronze
+                                        - silver
+                                        - gold
+                                    pendingTickets:
+                                      type: integer
+                                      minimum: 0
+# you can do all kinds of reusable things here to keep things consistent
+components:
+  schemas:
+    Errors:
+      required:
+        - errors
+      properties:
+        # Returning a list of errors/problems is a good practice
+        # That helps consumer to solve many problems in one shot
+        errors:
+          type: array
+          minItems: 1
+          items:
+            # An error feedback must help consumer solve the problem if possible
+            required:
+              - code
+              - message
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+              source:
+                title: ErrorSource
+                required:
+                  - location
+                  - name
+                properties:
+                  location:
+                    type: string
+                    enum:
+                      - path
+                      - query
+                      - body
+                      - header
+                  name:
+                    type: string
+                    description: The name of the property or parameter causing the error
+                  path:
+                    type: string
+                    description: JSON path targeting the source of error (only used when location is `body`)   
+     
